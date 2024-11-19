@@ -17,10 +17,10 @@ void initializeData(vector<vector<float>> &data, Grapher &grapher, int sample_si
             randomInt(0 + 2, grapher.getWidth() - 1),
             randomInt(0 + 2, grapher.getHeight() - 1));
 
-        grapher.drawCircle(pos, 2, {0, 0, 0});
+        grapher.drawCircle(pos, 5, {0, 0, 0});
         data.push_back(grapher.getPixelColor(pos));
     }
-    grapher.mainLoop();
+    grapher.mainLoop(false);
 }
 
 // Aplica K-Means y actualiza la visualización
@@ -44,7 +44,7 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
         // Actualiza los círculos en la gráfica
         for (auto &circle : grapher.getCircles())
         {
-            vector<float> pixel_color = grapher.getPixelColor(Vector2i(circle.getPosition().x, circle.getPosition().y));
+            vector<float> pixel_color = circle.pixel_rgb;
 
             float min_distance = numeric_limits<float>::max();
             int min_index = 0;
@@ -58,11 +58,11 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
                 }
             }
 
-            circle.setFillColor(colors[min_index]);
+            circle.shape.setFillColor(colors[min_index]);
         }
 
         count++;
-        grapher.mainLoop();
+        grapher.mainLoop(false);
     } while (!k_means.areCentroidsEqual(k_means.getCentroids(), last_centroids));
 
     k_means.printCentroids();
@@ -74,19 +74,6 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
 {
     AgglomerativeHierarchical agglo_hier(data);
 
-    std::cout << agglo_hier.getClusters().size() << " -> size \n";
-    auto clusters = agglo_hier.getClusters();
-
-    for (int i = 0; i < clusters.size(); i++)
-    {
-        for (const vector<float> &point : clusters[i])
-        {
-            for (float dimention : point)
-                cout << dimention << " ";
-            cout << "\n";
-        }
-    }
-
     // Genera colores aleatorios para las clases
     vector<Color> colors;
     for (int i = 0; i < data.size(); i++) // Máximo inicial de clusters
@@ -96,12 +83,16 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
 
     do
     {
+        grapher.mainLoop(true, 2);
+        // colors.erase(colors.end());
+        agglo_hier.step();
+
         auto clusters = agglo_hier.getClusters();
 
         // Actualizar la visualización
-        for (CircleShape &circle : grapher.getCircles())
+        for (Circle &circle : grapher.getCircles())
         {
-            vector<float> pixel_color = grapher.getPixelColor(Vector2i(circle.getPosition().x, circle.getPosition().y));
+            vector<float> pixel_color = circle.pixel_rgb;
 
             int index = -1;
 
@@ -110,8 +101,8 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
             {
                 for (const vector<float> &point : clusters[i])
                 {
-                    std::cout << pixel_color[0] << ", " << pixel_color[1] << ", " << pixel_color[2] << "\n";
-                    std::cout << point[0] << ", " << point[1] << ", " << point[2] << "\n";
+                    // cout << pixel_color[0] << " " << pixel_color[1] << ", " << pixel_color[2] << " vs ";
+                    // cout << point[0] << " " << point[1] << ", " << point[2] << "\n";
                     if (agglo_hier.arePointsEqual(pixel_color, point))
                     {
                         index = i;
@@ -124,11 +115,11 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
 
             // Asignar color al círculo
             if (index != -1)
-                circle.setFillColor(colors[index]);
+                circle.shape.setFillColor(colors[index]);
+            else
+                cout << "index: " << index;
         }
 
-        grapher.mainLoop();
-        agglo_hier.step();
         count++;
     } while (agglo_hier.getClusters().size() > number_classes);
 
@@ -154,7 +145,7 @@ int main()
     // applyKMeans(data, grapher, number_classes);
     applyAgglomerativeHierarchical(data, grapher, number_classes);
 
-    grapher.mainLoop();
+    grapher.mainLoop(false);
 
     return 0;
 }

@@ -24,63 +24,10 @@ Grapher::Grapher(const std::string &title, const std::string &file_route)
 }
 
 // Main Loop
-void Grapher::mainLoop(std::vector<std::pair<Vector2i, Vector2i>> &class_limits)
+void Grapher::mainLoop(bool auto_return, float time)
 {
     Clock clock;
-
-    int count = 0;
-    std::cout << "size: " << class_limits.size() << "\n";
-    int classes = class_limits.size();
-
-    std::pair<Vector2i, Vector2i> square;
-
-    Vector2i init_mouse_pos, deinit_mouse_pos;
-
-    while (window.isOpen())
-    {
-        Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == Event::Closed)
-                window.close();
-
-            // Manejar el clic del botón
-            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
-            {
-                init_mouse_pos = Vector2i(event.mouseButton.x, event.mouseButton.y);
-            }
-
-            if (event.type == Event::MouseButtonReleased && event.mouseButton.button == Mouse::Left)
-            {
-                deinit_mouse_pos = Vector2i(event.mouseButton.x, event.mouseButton.y);
-                class_limits[count++] = std::make_pair(init_mouse_pos, deinit_mouse_pos);
-
-                drawRectangle(init_mouse_pos, deinit_mouse_pos, randomColor());
-
-                if (count == class_limits.size())
-                    return;
-            }
-        }
-
-        window.clear();
-        window.draw(backgroundSprite);
-
-        // draw static elements
-        if (!rectangles.empty())
-            for (RectangleShape rectangle : rectangles)
-                window.draw(rectangle);
-
-        if (!circles.empty())
-            for (CircleShape circle : circles)
-                window.draw(circle);
-
-        window.display();
-    }
-}
-
-void Grapher::mainLoop()
-{
-    Clock clock;
+    float delta_time;
 
     while (window.isOpen())
     {
@@ -93,6 +40,10 @@ void Grapher::mainLoop()
                 return;
         }
 
+        delta_time += clock.restart().asMilliseconds();
+        if (auto_return && delta_time > time)
+            return;
+
         window.clear();
         window.draw(backgroundSprite);
 
@@ -102,8 +53,8 @@ void Grapher::mainLoop()
                 window.draw(rectangle);
 
         if (!circles.empty())
-            for (CircleShape circle : circles)
-                window.draw(circle);
+            for (Circle circle : circles)
+                window.draw(circle.shape);
 
         window.display();
     }
@@ -128,9 +79,13 @@ void Grapher::drawRectangle(Vector2i init_pos, Vector2i deinit_pos, Color color)
 
 void Grapher::drawCircle(Vector2i pos, float radius, Color color)
 {
-    CircleShape circle(radius);
-    circle.setPosition(pos.x - radius, pos.y - radius);
-    circle.setFillColor(color);
+    CircleShape circle_shape(radius);
+    circle_shape.setPosition(pos.x - radius, pos.y - radius);
+    circle_shape.setFillColor(color);
+
+    Circle circle;
+    circle.shape = circle_shape;
+    circle.pixel_rgb = getPixelColor(pos);
 
     this->circles.push_back(circle);
 }

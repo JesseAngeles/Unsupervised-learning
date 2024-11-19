@@ -22,7 +22,7 @@ public:
     void step();
     bool run(int max_iterations);
     float euclidianDistance(const std::vector<float> &a, const std::vector<float> &b);
-    bool arePointsEqual(const std::vector<float> &a, const std::vector<float> &b, float epsilon = 1e-4);
+    bool arePointsEqual(const std::vector<float> &a, const std::vector<float> &b, float epsilon = 2);
 
     // Getters
     std::vector<std::vector<float>> getData() const { return data; }
