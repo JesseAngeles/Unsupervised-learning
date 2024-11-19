@@ -4,6 +4,7 @@
 
 #include "clustering/KMeans.h"
 #include "clustering/AgglomerativeHierarchical.h"
+#include "clustering/AgglomerativeChaining.h"
 
 using namespace std;
 
@@ -69,7 +70,6 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
     cout << "Reached in " << count << " steps.\n";
 }
 
-// Aplica K-Means y actualiza la visualización
 void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &grapher, int number_classes)
 {
     AgglomerativeHierarchical agglo_hier(data);
@@ -126,6 +126,60 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
     cout << "Reached in " << count << " steps.\n";
 }
 
+void applyAgglomerativeChaining(const vector<vector<float>> &data, Grapher &grapher)
+{
+    float threshold;
+    cout << "Threshold: ";
+    cin >> threshold;
+
+    AgglomerativeChaining agglo_chain(data, threshold);
+
+    // Genera colores aleatorios para las clases
+    vector<Color> colors;
+    colors.push_back(grapher.randomColor());
+
+    std::vector<std::vector<float>> last_centroids = agglo_chain.getClusters();
+
+    int count = 0;
+    do
+    {
+        last_centroids = agglo_chain.getClusters();
+        cout << "centroids: " << last_centroids.size() << endl;
+        agglo_chain.step();
+        agglo_chain.printClusters();
+
+        colors.resize(agglo_chain.getClusters().size());
+        for (int i = 0; i < agglo_chain.getClusters().size(); i++)
+            colors[i] = grapher.randomColor();
+
+        // Actualiza los círculos en la gráfica
+        for (auto &circle : grapher.getCircles())
+        {
+            vector<float> pixel_color = circle.pixel_rgb;
+
+            float min_distance = numeric_limits<float>::max();
+            int min_index = 0;
+            for (int i = 0; i < agglo_chain.getClusters().size(); i++)
+            {
+                float distance = agglo_chain.euclidianDistance(pixel_color, agglo_chain.getClusters()[i]);
+                if (distance < min_distance)
+                {
+                    min_distance = distance;
+                    min_index = i;
+                }
+            }
+
+            circle.shape.setFillColor(colors[min_index]);
+        }
+
+        count++;
+        grapher.mainLoop(false);
+    } while (!agglo_chain.areCentroidsEqual(agglo_chain.getClusters(), last_centroids));
+
+    grapher.mainLoop(false);
+    cout << "Reached in " << count << " steps.\n";
+}
+
 int main()
 {
     string image_route = readFile(); // Selección de imagen
@@ -143,7 +197,8 @@ int main()
 
     // Seleccionar el algoritmo deseado
     // applyKMeans(data, grapher, number_classes);
-    applyAgglomerativeHierarchical(data, grapher, number_classes);
+    // applyAgglomerativeHierarchical(data, grapher, number_classes);
+    applyAgglomerativeChaining(data, grapher);
 
     grapher.mainLoop(false);
 
