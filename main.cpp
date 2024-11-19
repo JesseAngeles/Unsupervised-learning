@@ -1,7 +1,9 @@
 #include <iostream>
 #include "Functions.h"
 #include "gui/Grapher.h"
+
 #include "clustering/KMeans.h"
+#include "clustering/AgglomerativeHierarchical.h"
 
 using namespace std;
 
@@ -67,6 +69,72 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
     cout << "Reached in " << count << " steps.\n";
 }
 
+// Aplica K-Means y actualiza la visualización
+void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &grapher, int number_classes)
+{
+    AgglomerativeHierarchical agglo_hier(data);
+
+    std::cout << agglo_hier.getClusters().size() << " -> size \n";
+    auto clusters = agglo_hier.getClusters();
+
+    for (int i = 0; i < clusters.size(); i++)
+    {
+        for (const vector<float> &point : clusters[i])
+        {
+            for (float dimention : point)
+                cout << dimention << " ";
+            cout << "\n";
+        }
+    }
+
+    // Genera colores aleatorios para las clases
+    vector<Color> colors;
+    for (int i = 0; i < data.size(); i++) // Máximo inicial de clusters
+        colors.push_back(grapher.randomColor());
+
+    int count = 0;
+
+    do
+    {
+        auto clusters = agglo_hier.getClusters();
+
+        // Actualizar la visualización
+        for (CircleShape &circle : grapher.getCircles())
+        {
+            vector<float> pixel_color = grapher.getPixelColor(Vector2i(circle.getPosition().x, circle.getPosition().y));
+
+            int index = -1;
+
+            // Buscar el cluster del pixel
+            for (int i = 0; i < clusters.size(); i++)
+            {
+                for (const vector<float> &point : clusters[i])
+                {
+                    std::cout << pixel_color[0] << ", " << pixel_color[1] << ", " << pixel_color[2] << "\n";
+                    std::cout << point[0] << ", " << point[1] << ", " << point[2] << "\n";
+                    if (agglo_hier.arePointsEqual(pixel_color, point))
+                    {
+                        index = i;
+                        break; // No necesitamos seguir buscando
+                    }
+                }
+                if (index != -1)
+                    break;
+            }
+
+            // Asignar color al círculo
+            if (index != -1)
+                circle.setFillColor(colors[index]);
+        }
+
+        grapher.mainLoop();
+        agglo_hier.step();
+        count++;
+    } while (agglo_hier.getClusters().size() > number_classes);
+
+    cout << "Reached in " << count << " steps.\n";
+}
+
 int main()
 {
     string image_route = readFile(); // Selección de imagen
@@ -81,7 +149,10 @@ int main()
     cin >> sample_size;
 
     initializeData(data, grapher, sample_size);
-    applyKMeans(data, grapher, number_classes);
+
+    // Seleccionar el algoritmo deseado
+    // applyKMeans(data, grapher, number_classes);
+    applyAgglomerativeHierarchical(data, grapher, number_classes);
 
     grapher.mainLoop();
 
