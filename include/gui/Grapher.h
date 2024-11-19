@@ -24,6 +24,7 @@ private:
 
     std::vector<RectangleShape> rectangles;
     std::vector<CircleShape> circles;
+
 public:
     // Constructor
     Grapher(const std::string &title, const std::string &file_route);
@@ -35,9 +36,13 @@ public:
     void drawCircle(Vector2i pos, float radius, Color color);
     // Functions
     Color randomColor();
-    Color getPixelColor(Vector2i);
+    std::vector<float> getPixelColor(Vector2i);
 
     // Getters
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
+
+    std::vector<CircleShape> &getCircles() { return circles; }
     std::vector<RectangleShape> getRectangles() const { return rectangles; }
 
     // Settters

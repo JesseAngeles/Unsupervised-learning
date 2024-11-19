@@ -12,9 +12,11 @@ Grapher::Grapher(const std::string &title, const std::string &file_route)
     }
 
     sf::Vector2u size = backgroundTexture.getSize(); // Obtiene las dimensiones de la imagen
+    width = size.x;
+    height = size.y;
 
     // Crear la ventana
-    window.create(sf::VideoMode(size.x, size.y), title, Style::Close);
+    window.create(sf::VideoMode(width, height), title, Style::Close);
 
     // Configurar el sprite con la textura cargada
     backgroundSprite.setTexture(backgroundTexture);
@@ -87,6 +89,8 @@ void Grapher::mainLoop()
         {
             if (event.type == Event::Closed)
                 window.close();
+            if (event.type == Event::MouseButtonPressed)
+                return;
         }
 
         window.clear();
@@ -133,10 +137,23 @@ void Grapher::drawCircle(Vector2i pos, float radius, Color color)
 
 Color Grapher::randomColor()
 {
-    return Color(randomInt(0, 255), randomInt(0, 255), randomInt(0, 255));
+    return Color(randomInt(1, 254), randomInt(1, 254), randomInt(1, 254));
 }
 
-Color Grapher::getPixelColor(Vector2i pos)
+std::vector<float> Grapher::getPixelColor(Vector2i pos)
 {
-    return backgroundImage.getPixel(pos.x, pos.y);
+    if (pos.x < 0 || pos.x >= width || pos.y < 0 || pos.y >= height)
+    {
+        std::cerr << "Error: Coordenadas fuera de los límites (" << pos.x << ", " << pos.y << ")" << std::endl;
+        return {0.0f, 0.0f, 0.0f}; // Devuelve un color por defecto (negro)
+    }
+
+    Color color = backgroundImage.getPixel(pos.x, pos.y);
+
+    std::vector<float> rgb = {
+        static_cast<float>(color.r),
+        static_cast<float>(color.g),
+        static_cast<float>(color.b)};
+
+    return rgb;
 }

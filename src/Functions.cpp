@@ -13,14 +13,16 @@ std::string readFile()
         3,
         filterPatterns,
         nullptr,
-        0
-    );
+        0);
 
     return filePath ? std::string(filePath) : "";
 }
 
 int randomInt(int min, int max)
 {
+    if (min > max)
+        std::swap(min, max);
+
     std::uniform_int_distribution<int> distribution(min, max);
     return distribution(engine);
 }
