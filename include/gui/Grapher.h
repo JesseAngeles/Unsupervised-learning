@@ -9,6 +9,12 @@
 
 using namespace sf;
 
+struct Circle
+{
+    CircleShape shape;
+    std::vector<float> image_rgb;
+};
+
 class Grapher
 {
 private:
@@ -23,22 +29,30 @@ private:
     Sprite backgroundSprite;
 
     std::vector<RectangleShape> rectangles;
-    std::vector<CircleShape> circles;
+    std::vector<Circle> circles;
+    std::vector<VertexArray> lines;
+
 public:
     // Constructor
     Grapher(const std::string &title, const std::string &file_route);
 
     // Drawers
-    void mainLoop();
+    void mainLoop(std::vector<float> weights);
     void mainLoop(std::vector<std::pair<Vector2i, Vector2i>> &class_limits);
     void drawRectangle(Vector2i init_pos, Vector2i deinit_pos, Color color);
     void drawCircle(Vector2i pos, float radius, Color color);
+    void drawLine(Vector2i pos_i, Vector2i pos_j, Color color);
+
     // Functions
     Color randomColor();
-    Color getPixelColor(Vector2i);
+    std::vector<float> getPixelColor(Vector2i pos);
 
     // Getters
     std::vector<RectangleShape> getRectangles() const { return rectangles; }
+    std::vector<Circle> &getCircles() { return circles; }
+
+    int getWidth() const { return width; }
+    int getHeight() const { return height; }
 
     // Settters
 };

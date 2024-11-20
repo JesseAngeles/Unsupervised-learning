@@ -13,6 +13,9 @@ Grapher::Grapher(const std::string &title, const std::string &file_route)
 
     sf::Vector2u size = backgroundTexture.getSize(); // Obtiene las dimensiones de la imagen
 
+    width = size.x;
+    height = size.y;
+
     // Crear la ventana
     window.create(sf::VideoMode(size.x, size.y), title, Style::Close);
 
@@ -69,14 +72,14 @@ void Grapher::mainLoop(std::vector<std::pair<Vector2i, Vector2i>> &class_limits)
                 window.draw(rectangle);
 
         if (!circles.empty())
-            for (CircleShape circle : circles)
-                window.draw(circle);
+            for (Circle circle : circles)
+                window.draw(circle.shape);
 
         window.display();
     }
 }
 
-void Grapher::mainLoop()
+void Grapher::mainLoop(std::vector<float> weights)
 {
     Clock clock;
 
@@ -87,6 +90,18 @@ void Grapher::mainLoop()
         {
             if (event.type == Event::Closed)
                 window.close();
+
+            if (event.type == sf::Event::MouseButtonPressed && event.mouseButton.button == sf::Mouse::Left)
+            {
+                Vector2i mouse_pos(event.mouseButton.x, event.mouseButton.y);
+                std::vector<float> color = getPixelColor(mouse_pos);
+
+                float clas = weights[0]*color[0] + weights[1]*color[1] + weights[2]*color[2]+ weights[3];
+                if (clas < 0)
+                    drawCircle(mouse_pos, 5, rectangles[0].getOutlineColor());
+                else
+                    drawCircle(mouse_pos, 5, rectangles[1].getOutlineColor());
+            }
         }
 
         window.clear();
@@ -98,8 +113,12 @@ void Grapher::mainLoop()
                 window.draw(rectangle);
 
         if (!circles.empty())
-            for (CircleShape circle : circles)
-                window.draw(circle);
+            for (Circle circle : circles)
+                window.draw(circle.shape);
+
+        if (!lines.empty())
+            for (VertexArray line : lines)
+                window.draw(line);
 
         window.display();
     }
@@ -124,11 +143,28 @@ void Grapher::drawRectangle(Vector2i init_pos, Vector2i deinit_pos, Color color)
 
 void Grapher::drawCircle(Vector2i pos, float radius, Color color)
 {
-    CircleShape circle(radius);
-    circle.setPosition(pos.x - radius, pos.y - radius);
-    circle.setFillColor(color);
+    CircleShape circle_shape(radius);
+    circle_shape.setPosition(pos.x - radius, pos.y - radius);
+    circle_shape.setFillColor(color);
+
+    Circle circle;
+    circle.shape = circle_shape;
+    circle.image_rgb = getPixelColor(pos);
 
     this->circles.push_back(circle);
+}
+
+void Grapher::drawLine(Vector2i pos_i, Vector2i pos_j, Color color)
+{
+
+    VertexArray line(Lines, 2);
+
+    line[0].position = Vector2f(pos_i.x, pos_i.y);
+    line[1].position = Vector2f(pos_j.x, pos_j.y);
+
+    line[0].color = line[1].color = color;
+
+    this->lines.push_back(line);
 }
 
 Color Grapher::randomColor()
@@ -136,7 +172,21 @@ Color Grapher::randomColor()
     return Color(randomInt(0, 255), randomInt(0, 255), randomInt(0, 255));
 }
 
-Color Grapher::getPixelColor(Vector2i pos)
+
+std::vector<float> Grapher::getPixelColor(Vector2i pos)
 {
-    return backgroundImage.getPixel(pos.x, pos.y);
+    if (pos.x < 0 || pos.x >= width || pos.y < 0 || pos.y >= height)
+    {
+        std::cerr << "Error: Coordenadas fuera de los límites (" << pos.x << ", " << pos.y << ")" << std::endl;
+        return {0.0f, 0.0f, 0.0f}; // Devuelve un color por defecto (negro)
+    }
+
+    Color color = backgroundImage.getPixel(pos.x, pos.y);
+
+    std::vector<float> rgb = {
+        static_cast<float>(color.r),
+        static_cast<float>(color.g),
+        static_cast<float>(color.b)};
+
+    return rgb;
 }
