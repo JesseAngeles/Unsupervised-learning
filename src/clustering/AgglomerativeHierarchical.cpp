@@ -4,8 +4,11 @@ AgglomerativeHierarchical::AgglomerativeHierarchical(std::vector<std::vector<flo
     : data(data)
 {
     clusters.resize(data.size());
+    cluster_sizes.resize(data.size(), 1); // Cada cluster inicial tiene tamaño 1
     for (int i = 0; i < data.size(); i++)
-        clusters[i].push_back(data[i]);
+    {
+        clusters[i].insert(data[i]);  // Usamos insert, no push_back
+    }
 }
 
 void AgglomerativeHierarchical::step()
@@ -15,10 +18,13 @@ void AgglomerativeHierarchical::step()
     int index_b = -1;
 
     // Encontrar los clusters más cercanos
-    for (int i = 0; i < clusters.size() - 1; i++)
-        for (int j = i + 1; j < clusters.size(); j++)
-            for (std::vector<float> point_a : clusters[i])
-                for (std::vector<float> point_b : clusters[j])
+    for (size_t i = 0; i < clusters.size() - 1; i++)
+    {
+        for (size_t j = i + 1; j < clusters.size(); j++)
+        {
+            for (const auto &point_a : clusters[i])
+            {
+                for (const auto &point_b : clusters[j])
                 {
                     float distance = euclidianDistance(point_a, point_b);
                     if (distance < min_distance)
@@ -28,20 +34,33 @@ void AgglomerativeHierarchical::step()
                         index_b = j;
                     }
                 }
+            }
+        }
+    }
 
-    // Fusionar clusters
+    // Fusionar clusters si encontramos dos candidatos válidos
     if (index_a != -1 && index_b != -1)
     {
-        std::vector<std::vector<float>> new_cluster = clusters[index_a];
-        new_cluster.insert(new_cluster.end(), clusters[index_b].begin(), clusters[index_b].end());
+        int new_cluster_size = cluster_sizes[index_a] + cluster_sizes[index_b];
+        
+        // Añadir la fusión a la matriz de enlace (con el tamaño del nuevo cluster)
+        linkage_matrix.push_back({index_a, index_b, min_distance, new_cluster_size});
 
-        if (index_a > index_b)
-            std::swap(index_a, index_b);
+        // Actualiza cluster_sizes
+        cluster_sizes[index_a] = new_cluster_size;
+        cluster_sizes.erase(cluster_sizes.begin() + index_b);  // Eliminar el cluster b fusionado
 
+        // Crear el nuevo cluster combinando los dos más cercanos
+        for (const auto& point : clusters[index_b])
+        {
+            clusters[index_a].insert(point);  // Insertar los puntos del cluster b en el cluster a
+        }
+
+        // Eliminar el cluster b fusionado de la lista de clusters
         clusters.erase(clusters.begin() + index_b);
-        clusters.erase(clusters.begin() + index_a);
-        clusters.push_back(new_cluster);
     }
+
+    // Ahora los índices en `linkage_matrix` están correctos y no deben causar el error
 }
 
 
@@ -54,20 +73,37 @@ float AgglomerativeHierarchical::euclidianDistance(const std::vector<float> &a, 
     return std::sqrt(sum);
 }
 
-void AgglomerativeHierarchical::printClusters()
+void AgglomerativeHierarchical::saveLinkageMatrixToCSV(const std::string &filename)
 {
-    for (std::vector<std::vector<float>> cluster : clusters)
+    std::ofstream file(filename);
+
+    // Verificar si el archivo se abrió correctamente
+    if (!file.is_open())
     {
-        for (std::vector<float> point : cluster)
-        {
-            for (float dimention : point)
-            {
-                std::cout << dimention << " ";
-            }
-            std::cout << "\n";
-        }
-        std::cout << "\n";
+        std::cerr << "Error: No se pudo abrir el archivo " << filename << " para escritura.\n";
+        return;
     }
+
+    // Escribir encabezado
+    file << "cluster_a,cluster_b,distance,size\n";
+
+    // Escribir cada entrada de la matriz de enlace
+    for (const auto &entry : linkage_matrix)
+    {
+        file << std::get<0>(entry) << ","   // Índice del primer cluster
+             << std::get<1>(entry) << ","   // Índice del segundo cluster
+             << std::get<2>(entry) << ","   // Distancia
+             << std::get<3>(entry) << "\n"; // Tamaño del cluster resultante
+    }
+
+    // Cerrar el archivo
+    file.close();
+    std::cout << "Archivo CSV creado exitosamente: " << filename << "\n";
+}
+
+const std::vector<std::tuple<int, int, float, int>>& AgglomerativeHierarchical::getLinkageMatrix() const
+{
+    return linkage_matrix;
 }
 
 bool AgglomerativeHierarchical::arePointsEqual(const std::vector<float> &a, const std::vector<float> &b, float epsilon)

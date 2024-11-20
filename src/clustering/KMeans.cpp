@@ -90,11 +90,12 @@ bool KMeans::areCentroidsEqual(const std::vector<std::vector<float>> &a, const s
 
 void KMeans::printCentroids()
 {
-    std::cout << std::endl;
+    std::cout << "----------------------------------\n";
     for (std::vector<float> centroid : centroids)
-    {
+    {   
+        std::cout << "Centroid pos: (";
         for (float dimention : centroid)
             std::cout << dimention << " ";
-        std::cout << std::endl;
+        std::cout << ")\n";
     }
 }

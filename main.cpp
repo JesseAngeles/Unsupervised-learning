@@ -1,7 +1,8 @@
 #include <iostream>
+#include <memory>
+
 #include "Functions.h"
 #include "gui/Grapher.h"
-
 #include "clustering/KMeans.h"
 #include "clustering/AgglomerativeHierarchical.h"
 #include "clustering/AgglomerativeChaining.h"
@@ -37,7 +38,7 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
     std::vector<std::vector<float>> last_centroids = k_means.getCentroids();
 
     int count = 0;
-
+    vector<int> size(number_classes, 0);
     do
     {
         last_centroids = k_means.getCentroids();
@@ -58,7 +59,7 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
                     min_index = i;
                 }
             }
-
+            size[min_index]++;
             circle.shape.setFillColor(colors[min_index]);
         }
 
@@ -67,7 +68,10 @@ void applyKMeans(const vector<vector<float>> &data, Grapher &grapher, int number
     } while (!k_means.areCentroidsEqual(k_means.getCentroids(), last_centroids));
 
     k_means.printCentroids();
+    for (int i = 0; i < size.size(); i++)
+        cout << "Centroid " << i << ": " << size[i] / count << "\n";
     cout << "Reached in " << count << " steps.\n";
+    cout << "----------------------------------\n";
 }
 
 void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &grapher, int number_classes)
@@ -83,7 +87,7 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
 
     do
     {
-        grapher.mainLoop(true, 2);
+        grapher.mainLoop(true, 5);
         // colors.erase(colors.end());
         agglo_hier.step();
 
@@ -101,12 +105,10 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
             {
                 for (const vector<float> &point : clusters[i])
                 {
-                    // cout << pixel_color[0] << " " << pixel_color[1] << ", " << pixel_color[2] << " vs ";
-                    // cout << point[0] << " " << point[1] << ", " << point[2] << "\n";
                     if (agglo_hier.arePointsEqual(pixel_color, point))
                     {
                         index = i;
-                        break; // No necesitamos seguir buscando
+                        break;
                     }
                 }
                 if (index != -1)
@@ -123,7 +125,10 @@ void applyAgglomerativeHierarchical(const vector<vector<float>> &data, Grapher &
         count++;
     } while (agglo_hier.getClusters().size() > number_classes);
 
+    agglo_hier.saveLinkageMatrixToCSV("resources/data/linkage.csv");
+    
     cout << "Reached in " << count << " steps.\n";
+    cout << "----------------------------------\n";
 }
 
 void applyAgglomerativeChaining(const vector<vector<float>> &data, Grapher &grapher)
@@ -139,16 +144,17 @@ void applyAgglomerativeChaining(const vector<vector<float>> &data, Grapher &grap
     colors.push_back(grapher.randomColor());
 
     std::vector<std::vector<float>> last_centroids = agglo_chain.getClusters();
+    std::vector<int> size(last_centroids.size(), 0);
 
     int count = 0;
     do
     {
         last_centroids = agglo_chain.getClusters();
-        cout << "centroids: " << last_centroids.size() << endl;
         agglo_chain.step();
-        agglo_chain.printClusters();
 
         colors.resize(agglo_chain.getClusters().size());
+        size.resize(agglo_chain.getClusters().size());
+
         for (int i = 0; i < agglo_chain.getClusters().size(); i++)
             colors[i] = grapher.randomColor();
 
@@ -168,7 +174,7 @@ void applyAgglomerativeChaining(const vector<vector<float>> &data, Grapher &grap
                     min_index = i;
                 }
             }
-
+            size[min_index]++;
             circle.shape.setFillColor(colors[min_index]);
         }
 
@@ -176,31 +182,78 @@ void applyAgglomerativeChaining(const vector<vector<float>> &data, Grapher &grap
         grapher.mainLoop(false);
     } while (!agglo_chain.areCentroidsEqual(agglo_chain.getClusters(), last_centroids));
 
-    grapher.mainLoop(false);
+    agglo_chain.printClusters();
+    for (int i = 0; i < size.size(); i++)
+        cout << "Centroid " << i << ": " << size[i] / count << "\n";
     cout << "Reached in " << count << " steps.\n";
+    cout << "----------------------------------\n";
+}
+
+void menu(int &option)
+{
+    cout << "1) Choose image\n";
+    cout << "2) K Means\n";
+    cout << "3) Agglomerative herarchical\n";
+    cout << "4) Agglomerative chaining\n";
+    cin >> option;
 }
 
 int main()
 {
-    string image_route = readFile(); // Selección de imagen
-    int number_classes;
-    cout << "Number of classes: ";
-    cin >> number_classes;
-
-    Grapher grapher(image_route, image_route);
+    string image_route;
+    std::unique_ptr<Grapher> grapher;
     vector<vector<float>> data;
-    int sample_size;
-    cout << "Sample points: ";
-    cin >> sample_size;
+    int option = 0, size = 10, classes_size = 0;
 
-    initializeData(data, grapher, sample_size);
+    image_route = readFile();
+    grapher = make_unique<Grapher>(image_route, image_route);
 
-    // Seleccionar el algoritmo deseado
-    // applyKMeans(data, grapher, number_classes);
-    // applyAgglomerativeHierarchical(data, grapher, number_classes);
-    applyAgglomerativeChaining(data, grapher);
+    cout << "Random points: ";
+    cin >> size;
+    initializeData(data, *grapher, size);
 
-    grapher.mainLoop(false);
+    do
+    {
+        menu(option);
+
+        switch (option)
+        {
+        case 1:
+        {
+            image_route = readFile();
+
+            grapher = make_unique<Grapher>(image_route, image_route);
+            cout << "Random points: ";
+            cin >> size;
+            initializeData(data, *grapher, size);
+        }
+        case 2:
+        {
+            cout << "Total classes: ";
+            cin >> classes_size;
+            applyKMeans(data, *grapher, classes_size);
+            break;
+        }
+        case 3:
+        {
+            cout << "Total classes: ";
+            cin >> classes_size;
+            applyAgglomerativeHierarchical(data, *grapher, classes_size);
+            break;
+        }
+        case 4:
+        {
+            applyAgglomerativeChaining(data, *grapher);
+            break;
+        }
+        default:
+            cout << "Opción no válida.\n";
+        }
+
+        for (Circle &circle : (*grapher).getCircles())
+            circle.shape.setFillColor(Color(0, 0, 0));
+
+    } while (option != 0);
 
     return 0;
 }
